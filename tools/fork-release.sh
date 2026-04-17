@@ -88,9 +88,12 @@ cmd_rebuild() {
   require_clean_tree
   ensure_can_create_branch fork
   # Read the branches list before the checkout discards the working tree —
-  # fork-branches.txt doesn't exist on main.
-  local -a brs
-  mapfile -t brs < <(branches)
+  # fork-branches.txt doesn't exist on main. Use a while-loop instead of
+  # mapfile for bash 3.2 compatibility (macOS system bash).
+  local brs=()
+  while IFS= read -r line; do
+    brs+=("$line")
+  done < <(branches)
   git checkout -B fork main
   for br in "${brs[@]}"; do
     echo "==> Merging $br into fork"
