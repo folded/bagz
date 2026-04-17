@@ -55,8 +55,8 @@ git push origin v0.1.2+fork.1
 ```
 
 Pushing the tag triggers `.github/workflows/wheels.yml`, which builds wheels
-for manylinux_2_28 (x86_64, aarch64) and macOS (x86_64, arm64), attaches them
-to a GitHub Release, and regenerates the simple index on `gh-pages`.
+for manylinux_2_28 (x86_64, aarch64) and macOS 15+ (arm64), attaches them to
+a GitHub Release, and regenerates the simple index on `gh-pages`.
 
 The `all` subcommand is a shortcut for running these in order:
 
