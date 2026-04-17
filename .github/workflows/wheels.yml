@@ -18,15 +18,13 @@ jobs:
             arch: x86_64
           - os: ubuntu-24.04-arm
             arch: aarch64
-          # macosx_deployment_target must match the runner's OS version,
-          # otherwise delocate rejects the wheel because Homebrew libs are
-          # built targeting the host OS (e.g. macos-14 ships 14.0-only libs).
-          - os: macos-13
-            arch: x86_64
-            macosx_deployment_target: "13.0"
-          - os: macos-14
+          # macOS wheels are only consumed locally on dev machines; target
+          # the latest OS and drop x86_64 entirely. macosx_deployment_target
+          # must match the runner OS so delocate accepts the Homebrew-linked
+          # dylibs.
+          - os: macos-15
             arch: arm64
-            macosx_deployment_target: "14.0"
+            macosx_deployment_target: "15.0"
     steps:
       - uses: actions/checkout@v4
         with:
