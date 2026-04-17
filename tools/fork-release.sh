@@ -94,15 +94,23 @@ cmd_rebuild() {
   while IFS= read -r line; do
     brs+=("$line")
   done < <(branches)
+  # Remember where we started so we can return there after rebuilding —
+  # leaving the user on `fork` (a disposable branch) invites accidental
+  # commits onto it.
+  local starting_ref
+  starting_ref=$(git symbolic-ref --quiet --short HEAD) || \
+    starting_ref=$(git rev-parse HEAD)
   git checkout -B fork main
   for br in "${brs[@]}"; do
     echo "==> Merging $br into fork"
     if ! git merge --no-ff --no-edit "$br"; then
-      echo "    merge conflict on $br — resolve, commit, then re-run this script" >&2
+      echo "    merge conflict on $br — resolve, commit, then 'git checkout $starting_ref'" >&2
       exit 1
     fi
   done
   echo "fork is at $(git rev-parse --short fork)"
+  git checkout --quiet "$starting_ref"
+  echo "returned to $starting_ref"
 }
 
 cmd_prune() {
