@@ -18,10 +18,15 @@ jobs:
             arch: x86_64
           - os: ubuntu-24.04-arm
             arch: aarch64
+          # macosx_deployment_target must match the runner's OS version,
+          # otherwise delocate rejects the wheel because Homebrew libs are
+          # built targeting the host OS (e.g. macos-14 ships 14.0-only libs).
           - os: macos-13
             arch: x86_64
+            macosx_deployment_target: "13.0"
           - os: macos-14
             arch: arm64
+            macosx_deployment_target: "14.0"
     steps:
       - uses: actions/checkout@v4
         with:
@@ -36,6 +41,7 @@ jobs:
       - uses: pypa/cibuildwheel@v2.21.3
         env:
           CIBW_ARCHS: ${{ matrix.arch }}
+          MACOSX_DEPLOYMENT_TARGET: ${{ matrix.macosx_deployment_target }}
 
       - uses: actions/upload-artifact@v4
         with:
