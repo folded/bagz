@@ -23,12 +23,34 @@ UPSTREAM_REMOTE=${UPSTREAM_REMOTE:-upstream}
 ORIGIN_REMOTE=${ORIGIN_REMOTE:-origin}
 
 branches() {
+  require_branches_file
   grep -Ev '^\s*(#|$)' "$BRANCHES_FILE"
+}
+
+require_branches_file() {
+  if [[ ! -f "$BRANCHES_FILE" ]]; then
+    echo "error: $BRANCHES_FILE not found." >&2
+    echo "Check out a branch that contains it (e.g. meta/ci-wheels or fork)." >&2
+    exit 1
+  fi
 }
 
 require_clean_tree() {
   if ! git diff-index --quiet HEAD --; then
     echo "error: working tree has uncommitted changes; commit or stash first" >&2
+    exit 1
+  fi
+}
+
+# Git stores refs as paths, so a ref named `foo` cannot coexist with refs
+# under `foo/`. Validate before any destructive op that would create `foo`.
+ensure_can_create_branch() {
+  local ref="$1"
+  local conflicting
+  conflicting=$(git for-each-ref --format='%(refname:short)' "refs/heads/${ref}/")
+  if [[ -n "$conflicting" ]]; then
+    echo "error: cannot create branch '$ref'; conflicting branches exist:" >&2
+    printf '  %s\n' $conflicting >&2
     exit 1
   fi
 }
@@ -64,14 +86,19 @@ cmd_rebase() {
 
 cmd_rebuild() {
   require_clean_tree
+  ensure_can_create_branch fork
+  # Read the branches list before the checkout discards the working tree —
+  # fork-branches.txt doesn't exist on main.
+  local -a brs
+  mapfile -t brs < <(branches)
   git checkout -B fork main
-  while read -r br; do
+  for br in "${brs[@]}"; do
     echo "==> Merging $br into fork"
     if ! git merge --no-ff --no-edit "$br"; then
       echo "    merge conflict on $br — resolve, commit, then re-run this script" >&2
       exit 1
     fi
-  done < <(branches)
+  done
   echo "fork is at $(git rev-parse --short fork)"
 }
 

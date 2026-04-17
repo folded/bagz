@@ -5,4 +5,4 @@
 # See FORK.md for the full maintenance workflow.
 
 fix/gcs-range-read
-fork/ci-wheels
+meta/ci-wheels
