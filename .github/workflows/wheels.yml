@@ -73,11 +73,11 @@ jobs:
     permissions:
       contents: write
     steps:
+      - uses: actions/checkout@v4
+
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-
-      - run: pip install dumb-pypi
 
       - name: Collect wheel URLs from all releases
         env:
@@ -90,11 +90,7 @@ jobs:
           test -s packages.json
 
       - name: Generate simple index
-        run: |
-          dumb-pypi \
-            --package-list-json packages.json \
-            --output-dir _site \
-            --packages-url "https://github.com/${{ github.repository }}/releases/download"
+        run: python3 tools/build-pypi-index.py packages.json _site
 
       - uses: peaceiris/actions-gh-pages@v4
         with:
