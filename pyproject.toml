@@ -72,7 +72,8 @@ yum install -y libcurl-devel openssl3-devel \
 repair-wheel-command = "auditwheel repair --strip -w {dest_dir} {wheel}"
 
 [tool.cibuildwheel.macos]
-before-all = "brew install libcurl openssl@3"
+# Homebrew formula is `curl` (provides libcurl); `libcurl` is not a formula.
+before-all = "brew install curl openssl@3"
 
 [tool.cibuildwheel.macos.environment]
 # brew prefix differs between arm64 (/opt/homebrew) and x86_64 (/usr/local),
