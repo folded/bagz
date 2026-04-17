@@ -10,10 +10,13 @@ describes how the fork is organised and how to cut a release.
 | -------------- | ------------------------------------------------------------------------ |
 | `main`         | Mirrors `upstream/main` exactly. Never committed to directly.            |
 | `fix/<name>`   | One patch intended to be PR'd upstream. Branched from `main`.            |
-| `fork/<name>`  | Fork-only content (CI, tooling) that will never go upstream.             |
+| `meta/<name>`  | Fork-only content (CI, tooling) that will never go upstream.             |
 | `fork`         | Disposable integration branch. Rebuilt from scratch on every release.    |
 
-`fork` = `main` + every `fix/*` + every `fork/*`, merged in the order listed in
+Note: `meta/*` (not `fork/*`) is used for fork-only branches because git
+cannot have a branch named `fork` coexist with branches under `fork/`.
+
+`fork` = `main` + every `fix/*` + every `meta/*`, merged in the order listed in
 [`tools/fork-branches.txt`](tools/fork-branches.txt). Release tags are cut
 from `fork`.
 
