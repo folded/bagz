@@ -28,6 +28,11 @@ jobs:
           # setuptools_scm derives the version from tags.
           fetch-depth: 0
 
+      # pyproject.toml pins build-frontend = "build[uv]". On Linux, uv lives
+      # inside the manylinux container; on macOS cibuildwheel runs natively
+      # and needs uv on PATH.
+      - uses: astral-sh/setup-uv@v6
+
       - uses: pypa/cibuildwheel@v2.21.3
         env:
           CIBW_ARCHS: ${{ matrix.arch }}
