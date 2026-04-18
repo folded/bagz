@@ -1,0 +1,8 @@
+# Branches stacked into the `fork` integration branch, in merge order.
+# One branch per line. Lines starting with `#` are ignored.
+#
+# Remove a branch once its content has been merged upstream.
+# See FORK.md for the full maintenance workflow.
+
+fix/macos-aggregate-init
+meta/ci-wheels
