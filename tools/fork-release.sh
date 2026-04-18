@@ -9,7 +9,7 @@
 #   tools/fork-release.sh tag <ver>     Tag the tip of `fork` as v<ver>.
 #   tools/fork-release.sh all <ver>     sync + rebase + rebuild + tag.
 #
-# <ver> is a PEP 440 local version, e.g. 0.1.2+fork.1.
+# <ver> is a PEP 440 post-release, e.g. 0.1.2.post1.
 #
 # Environment:
 #   UPSTREAM_REMOTE  (default: upstream)
@@ -128,7 +128,7 @@ cmd_prune() {
 cmd_tag() {
   local ver="${1:-}"
   if [[ -z "$ver" ]]; then
-    echo "error: version required, e.g. 0.1.2+fork.1" >&2
+    echo "error: version required, e.g. 0.1.2.post1" >&2
     exit 2
   fi
   local tag="v${ver}"
@@ -144,7 +144,7 @@ cmd_tag() {
 cmd_all() {
   local ver="${1:-}"
   if [[ -z "$ver" ]]; then
-    echo "error: version required, e.g. 0.1.2+fork.1" >&2
+    echo "error: version required, e.g. 0.1.2.post1" >&2
     exit 2
   fi
   cmd_sync

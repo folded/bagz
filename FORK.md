@@ -32,26 +32,30 @@ the simple index publishes to `https://<you>.github.io/bagz/simple/`.
 
 ## Versioning
 
-Release tags use PEP 440 local versions:
+Release tags use PEP 440 post-releases:
 
-    v<upstream-version>+fork.<N>
+    v<upstream-version>.post<N>
 
 - `<upstream-version>` — the upstream version the fork is based on.
 - `<N>` — bump whenever fork content changes against the same upstream base;
   reset to 1 when `<upstream-version>` changes.
 
-Examples: `v0.1.2+fork.1`, `v0.1.2+fork.2`, `v0.2.0+fork.1`.
+Examples: `v0.1.2.post1`, `v0.1.2.post2`, `v0.2.0.post1`.
 
-The `+` local segment means these wheels cannot be uploaded to public PyPI —
-they are published to GitHub Releases and indexed on the `gh-pages` branch.
+PEP 440 sorts `X.Y.Z < X.Y.Z.postN < X.Y.(Z+1)`, so a pinned fork version
+stays installable until upstream publishes a newer release, and upstream
+wins automatically once it does.
+
+Historical tags `v0.2.0+fork.1`..`v0.2.0+fork.7` pre-date this scheme and
+remain published for reference. New releases use `.post<N>`.
 
 ## Release cycle
 
 The entire cycle is driven by [`tools/fork-release.sh`](tools/fork-release.sh):
 
 ```bash
-tools/fork-release.sh all 0.1.2+fork.1
-git push origin v0.1.2+fork.1
+tools/fork-release.sh all 0.1.2.post1
+git push origin v0.1.2.post1
 ```
 
 Pushing the tag triggers `.github/workflows/wheels.yml`, which builds wheels
@@ -95,13 +99,13 @@ Downstream projects pin against the simple index:
 [tool.uv]
 extra-index-url = ["https://<you>.github.io/bagz/simple/"]
 
-dependencies = ["bagz==0.1.2+fork.1"]
+dependencies = ["bagz==0.1.2.post1"]
 ```
 
 ```
 # requirements.txt
 --extra-index-url https://<you>.github.io/bagz/simple/
-bagz==0.1.2+fork.1
+bagz==0.1.2.post1
 ```
 
 pip, uv, poetry, and pdm all resolve the right wheel for the consumer's
