@@ -23,16 +23,20 @@ UPSTREAM_REMOTE=${UPSTREAM_REMOTE:-upstream}
 ORIGIN_REMOTE=${ORIGIN_REMOTE:-origin}
 
 branches() {
-  require_branches_file
-  grep -Ev '^\s*(#|$)' "$BRANCHES_FILE"
-}
-
-require_branches_file() {
-  if [[ ! -f "$BRANCHES_FILE" ]]; then
-    echo "error: $BRANCHES_FILE not found." >&2
-    echo "Check out a branch that contains it (e.g. meta/ci-wheels or fork)." >&2
-    exit 1
-  fi
+  # Read the branch list from whichever ref has it, not the working tree:
+  # cmd_sync switches to `main`, which doesn't carry the file. Checking
+  # origin/* covers the case where the user re-cloned and hasn't fetched
+  # the meta/ci-wheels branch locally yet.
+  local ref content
+  for ref in HEAD meta/ci-wheels fork origin/meta/ci-wheels origin/fork; do
+    if content=$(git show "$ref:tools/fork-branches.txt" 2>/dev/null); then
+      printf '%s\n' "$content" | grep -Ev '^[[:space:]]*(#|$)' || true
+      return 0
+    fi
+  done
+  echo "error: tools/fork-branches.txt not found in HEAD, meta/ci-wheels, fork," >&2
+  echo "or their origin/* counterparts." >&2
+  return 1
 }
 
 require_clean_tree() {
@@ -65,8 +69,14 @@ cmd_sync() {
 
 cmd_rebase() {
   require_clean_tree
+  # Materialise branches before iterating. Piping via process substitution
+  # would swallow the exit code, so if branches() fails the loop would
+  # silently see EOF and pretend to succeed.
+  local branch_list
+  branch_list=$(branches) || exit 1
   local failed=0
-  while read -r br; do
+  while IFS= read -r br; do
+    [[ -n "$br" ]] || continue
     echo "==> Rebasing $br onto main"
     if ! git rev-parse --verify "$br" >/dev/null 2>&1; then
       echo "    branch '$br' not found locally."
@@ -79,7 +89,7 @@ cmd_rebase() {
       echo "    rebase conflict on $br — resolve, run 'git rebase --continue', then re-run this script" >&2
       exit 1
     fi
-  done < <(branches)
+  done <<<"$branch_list"
   git checkout main
   [[ $failed -eq 0 ]]
 }
@@ -87,13 +97,20 @@ cmd_rebase() {
 cmd_rebuild() {
   require_clean_tree
   ensure_can_create_branch fork
-  # Read the branches list before the checkout discards the working tree —
-  # fork-branches.txt doesn't exist on main. Use a while-loop instead of
-  # mapfile for bash 3.2 compatibility (macOS system bash).
+  # Materialise the branches list up-front: branches() needs to read from
+  # a git ref (the working tree gets discarded by the checkout below), and
+  # process-substitution pipes swallow its exit code on failure.
+  local branch_list
+  branch_list=$(branches) || exit 1
   local brs=()
   while IFS= read -r line; do
+    [[ -n "$line" ]] || continue
     brs+=("$line")
-  done < <(branches)
+  done <<<"$branch_list"
+  if [[ ${#brs[@]} -eq 0 ]]; then
+    echo "error: fork-branches.txt is empty; nothing to merge into fork" >&2
+    exit 1
+  fi
   # Remember where we started so we can return there after rebuilding —
   # leaving the user on `fork` (a disposable branch) invites accidental
   # commits onto it.
