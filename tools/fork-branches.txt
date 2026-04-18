@@ -4,6 +4,5 @@
 # Remove a branch once its content has been merged upstream.
 # See FORK.md for the full maintenance workflow.
 
-fix/gcs-range-read
 fix/macos-aggregate-init
 meta/ci-wheels
