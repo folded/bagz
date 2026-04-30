@@ -5,4 +5,5 @@
 # See FORK.md for the full maintenance workflow.
 
 fix/macos-aggregate-init
+fix/bulk-open-parallelism
 meta/ci-wheels
