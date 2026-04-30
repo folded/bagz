@@ -1,0 +1,98 @@
+name: Build wheels
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+jobs:
+  build_wheels:
+    name: ${{ matrix.os }} / ${{ matrix.arch }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            arch: x86_64
+          - os: ubuntu-24.04-arm
+            arch: aarch64
+          # macOS wheels are only consumed locally on dev machines; target
+          # the latest OS and drop x86_64 entirely. macosx_deployment_target
+          # must match the runner OS so delocate accepts the Homebrew-linked
+          # dylibs.
+          - os: macos-15
+            arch: arm64
+            macosx_deployment_target: "15.0"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # setuptools_scm derives the version from tags.
+          fetch-depth: 0
+
+      # pyproject.toml pins build-frontend = "build[uv]". On Linux, uv lives
+      # inside the manylinux container; on macOS cibuildwheel runs natively
+      # and needs uv on PATH.
+      - uses: astral-sh/setup-uv@v6
+
+      - uses: pypa/cibuildwheel@v2.21.3
+        env:
+          CIBW_ARCHS: ${{ matrix.arch }}
+          MACOSX_DEPLOYMENT_TARGET: ${{ matrix.macosx_deployment_target }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wheels-${{ matrix.os }}-${{ matrix.arch }}
+          path: wheelhouse/*.whl
+
+  release:
+    name: Publish release
+    needs: build_wheels
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          pattern: wheels-*
+          merge-multiple: true
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*.whl
+          generate_release_notes: true
+
+  publish_index:
+    name: Publish package index
+    needs: release
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Collect wheel URLs from all releases
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          gh api --paginate "repos/${REPO}/releases?per_page=100" \
+            | jq -c '.[]?.assets[]? | select(.name | endswith(".whl")) | {filename: .name, url: .browser_download_url}' \
+            > packages.json
+          test -s packages.json
+
+      - name: Generate simple index
+        run: python3 tools/build-pypi-index.py packages.json _site
+
+      - uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: _site
