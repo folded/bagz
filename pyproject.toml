@@ -19,6 +19,7 @@ classifiers = [
     "Intended Audience :: Developers",
     "License :: OSI Approved :: Apache Software License",
     "Operating System :: POSIX :: Linux",
+    "Operating System :: MacOS",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
@@ -46,7 +47,9 @@ cmake.args = ["-Wno-dev"]
 # We need openssl3, which is only available in newer versions of the build
 # image.
 manylinux-x86_64-image = "quay.io/pypa/manylinux_2_28_x86_64:2024.12.16-1"
-build = "cp3*-manylinux_x86_64"
+manylinux-aarch64-image = "quay.io/pypa/manylinux_2_28_aarch64:2024.12.16-1"
+build = "cp31{0,1,2,3}-*"
+skip = "*-musllinux_*"
 build-frontend = "build[uv]"
 build-verbosity = 1
 test-command = "pytest {package}/src"
@@ -67,3 +70,13 @@ yum install -y libcurl-devel openssl3-devel \
 '''
 
 repair-wheel-command = "auditwheel repair --strip -w {dest_dir} {wheel}"
+
+[tool.cibuildwheel.macos]
+# Homebrew formula is `curl` (provides libcurl); `libcurl` is not a formula.
+before-all = "brew install curl openssl@3"
+
+[tool.cibuildwheel.macos.environment]
+# brew prefix differs between arm64 (/opt/homebrew) and x86_64 (/usr/local),
+# so resolve it dynamically rather than hard-coding.
+OPENSSL_ROOT_DIR = "$(brew --prefix openssl@3)"
+PKG_CONFIG_PATH = "$(brew --prefix openssl@3)/lib/pkgconfig:$(brew --prefix curl)/lib/pkgconfig"
